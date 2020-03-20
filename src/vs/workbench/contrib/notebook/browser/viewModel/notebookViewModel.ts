@@ -12,7 +12,7 @@ import { CellViewModel } from 'vs/workbench/contrib/notebook/browser/viewModel/n
 import { ICell } from 'vs/workbench/contrib/notebook/common/notebookCommon';
 import { IModelDeltaDecoration } from 'vs/editor/common/model';
 import { onUnexpectedError } from 'vs/base/common/errors';
-import { CellFindMatch, CellState, ICellViewModel } from 'vs/workbench/contrib/notebook/browser/notebookBrowser';
+import { CellFindMatch, CellEditState, ICellViewModel } from 'vs/workbench/contrib/notebook/browser/notebookBrowser';
 import { IBulkEditService } from 'vs/editor/browser/services/bulkEditService';
 import { Range } from 'vs/editor/common/core/range';
 import { WorkspaceTextEdit } from 'vs/editor/common/modes';
@@ -129,7 +129,7 @@ export class NotebookViewModel extends Disposable {
 	hide() {
 		this._viewCells.forEach(cell => {
 			if (cell.getText() !== '') {
-				cell.state = CellState.Preview;
+				cell.editState = CellEditState.Preview;
 			}
 		});
 	}
@@ -207,7 +207,7 @@ export class NotebookViewModel extends Disposable {
 
 	saveEditorViewState(): INotebookEditorViewState {
 		const state: { [key: number]: boolean } = {};
-		this._viewCells.filter(cell => cell.state === CellState.Editing).forEach(cell => state[cell.cell.handle] = true);
+		this._viewCells.filter(cell => cell.editState === CellEditState.Editing).forEach(cell => state[cell.cell.handle] = true);
 		const editorViewStates: { [key: number]: editorCommon.ICodeEditorViewState } = {};
 		this._viewCells.map(cell => ({ handle: cell.cell.handle, state: cell.saveEditorViewState() })).forEach(viewState => {
 			if (viewState.state) {
@@ -230,7 +230,7 @@ export class NotebookViewModel extends Disposable {
 			const isEditing = viewState.editingCells && viewState.editingCells[cell.handle];
 			const editorViewState = viewState.editorViewStates && viewState.editorViewStates[cell.handle];
 
-			cell.state = isEditing ? CellState.Editing : CellState.Preview;
+			cell.editState = isEditing ? CellEditState.Editing : CellEditState.Preview;
 			cell.restoreEditorViewState(editorViewState);
 		});
 	}

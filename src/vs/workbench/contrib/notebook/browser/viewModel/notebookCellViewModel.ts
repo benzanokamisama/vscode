@@ -16,7 +16,7 @@ import { PrefixSumComputer } from 'vs/editor/common/viewModel/prefixSumComputer'
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { MarkdownRenderer } from 'vs/workbench/contrib/notebook/browser/view/renderers/mdRenderer';
 import { CellKind, ICell, IOutput, NotebookCellOutputsSplice } from 'vs/workbench/contrib/notebook/common/notebookCommon';
-import { CellFindMatch, CellState, CursorAtBoundary, CellFocusMode, ICellViewModel } from 'vs/workbench/contrib/notebook/browser/notebookBrowser';
+import { CellFindMatch, CellEditState, CursorAtBoundary, CellFocusMode, ICellViewModel, CellRunState } from 'vs/workbench/contrib/notebook/browser/notebookBrowser';
 import { EDITOR_TOP_PADDING, EDITOR_BOTTOM_PADDING, EDITOR_TOOLBAR_HEIGHT } from 'vs/workbench/contrib/notebook/browser/constants';
 
 export class CellViewModel extends Disposable implements ICellViewModel {
@@ -25,8 +25,10 @@ export class CellViewModel extends Disposable implements ICellViewModel {
 	private _html: HTMLElement | null = null;
 	protected readonly _onDidDispose = new Emitter<void>();
 	readonly onDidDispose = this._onDidDispose.event;
-	protected readonly _onDidChangeCellState = new Emitter<void>();
-	readonly onDidChangeCellState = this._onDidChangeCellState.event;
+	protected readonly _onDidChangeCellEditState = new Emitter<void>();
+	readonly onDidChangeCellEditState = this._onDidChangeCellEditState.event;
+	protected readonly _onDidChangeCellRunState = new Emitter<void>();
+	readonly onDidChangeCellRunState = this._onDidChangeCellRunState.event;
 	protected readonly _onDidChangeFocusMode = new Emitter<void>();
 	readonly onDidChangeFocusMode = this._onDidChangeFocusMode.event;
 	protected readonly _onDidChangeOutputs = new Emitter<NotebookCellOutputsSplice[]>();
@@ -59,19 +61,34 @@ export class CellViewModel extends Disposable implements ICellViewModel {
 		return this.cell.metadata;
 	}
 
-	private _state: CellState = CellState.Preview;
+	private _editState: CellEditState = CellEditState.Preview;
 
-	get state(): CellState {
-		return this._state;
+	get editState(): CellEditState {
+		return this._editState;
 	}
 
-	set state(newState: CellState) {
-		if (newState === this._state) {
+	set editState(newState: CellEditState) {
+		if (newState === this._editState) {
 			return;
 		}
 
-		this._state = newState;
-		this._onDidChangeCellState.fire();
+		this._editState = newState;
+		this._onDidChangeCellEditState.fire();
+	}
+
+	private _runState: CellRunState = CellRunState.Idle;
+
+	get runState(): CellRunState {
+		return this._runState;
+	}
+
+	set runState(newState: CellRunState) {
+		if (newState === this._runState) {
+			return;
+		}
+
+		this._runState = newState;
+		this._onDidChangeCellRunState.fire();
 	}
 
 	private _focusMode: CellFocusMode = CellFocusMode.Container;
@@ -253,7 +270,7 @@ export class CellViewModel extends Disposable implements ICellViewModel {
 	}
 
 	save() {
-		if (this._textModel && !this._textModel.isDisposed() && this.state === CellState.Editing) {
+		if (this._textModel && !this._textModel.isDisposed() && this.editState === CellEditState.Editing) {
 			let cnt = this._textModel.getLineCount();
 			this.cell.source = this._textModel.getLinesContent().map((str, index) => str + (index !== cnt - 1 ? '\n' : ''));
 		}
@@ -401,7 +418,7 @@ export class CellViewModel extends Disposable implements ICellViewModel {
 	}
 
 	onDeselect() {
-		this.state = CellState.Preview;
+		this.editState = CellEditState.Preview;
 	}
 
 	cursorAtBoundary(): CursorAtBoundary {
